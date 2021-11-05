@@ -1,23 +1,19 @@
-import logo from './logo.svg';
 import './App.css';
+import * as React from "react";
+import { Switch, Route, Link } from "react-router-dom";
+import PayWithCrypto from './routes/payWithCrypto';
+import PaymentStatus from './routes/paymentStatus';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div class="">
+      <Switch>
+        <Route path="/paymentStatus" component={PaymentStatus}>
+        </Route>
+        <Route path="/">
+          <PayWithCrypto />
+        </Route>
+      </Switch>
     </div>
   );
 }
