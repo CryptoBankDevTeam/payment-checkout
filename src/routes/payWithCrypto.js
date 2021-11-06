@@ -13,9 +13,6 @@ import {Token1, Token2, PaymentContract} from '../contracts/artifacts';
 
 axios.defaults.baseURL = 'https://api.binance.com';
 
-let apiKey = 'EJ5Q4PXasDGTBBLnBCGc3dNfSNHxBm66kqO7KOxYXuccRrsXJJRG1qGXcNOoYpyb'
-let secretKey = '7z3pB3aPefmoMFJlYv7hpWvoKFQ8myiqYYvghqekIPupve9SIst9ADG8Ge0B4W4s'
-
 function BalanceContent(props) {
     return(
         <div class="py-0">
