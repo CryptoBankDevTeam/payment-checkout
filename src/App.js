@@ -6,7 +6,7 @@ import PaymentStatus from './routes/paymentStatus';
 
 function App() {
   return (
-    <div class="">
+    <div class="flex flex-col h-screen">
       <Switch>
         <Route path="/paymentStatus" component={PaymentStatus}>
         </Route>

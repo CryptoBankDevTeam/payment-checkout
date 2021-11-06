@@ -20,7 +20,7 @@ function BalanceContent(props) {
     return(
         <div class="py-0">
             <p class="text-sm font-light text-gray-500">{props.name}</p>
-            <p class="text-xl">{props.value}</p>
+            <p class="text-xl">{Number(props.value).toFixed(5)}</p>
         </div>
     );
 }
@@ -31,7 +31,7 @@ function Balance(props) {
 
     return(
         <div class="mb-4">
-            <Link to={`/paymentStatus?tokenSymbol=${props.tokenSymbol}&tokenQty=${props.needed}&fiatSymbol=${props.fiatSymbol}&usdAmount=${props.usdAmount}`}>
+            <Link to={`/paymentStatus?tokenSymbol=${props.tokenSymbol}&tokenQty=${props.needed}&fiatSymbol=${props.fiatSymbol}&usdAmount=${props.usdAmount}&fiatAmount=${props.fiatAmount}`}>
                 <div class="flex flex-row justify-between bg-white rounded-2xl p-4">
                     <div class="border-red-600">
                         <h1 class="text-2xl font-bold text-red-600">{props.tokenSymbol}</h1>
@@ -166,6 +166,9 @@ class PayWithCrypto extends React.Component {
         let token1
         let token2
 
+        PaymentContract.setProvider(web3Provider)
+        let paymentContract = await PaymentContract.deployed()
+
         let token1PriceInformation = {
             tokenQty: 0,
             symbol: '',
@@ -231,12 +234,23 @@ class PayWithCrypto extends React.Component {
             }).then(async balance => {
                 //alert(`balance is ${balance}`)
                 token1PriceInformation.balance = web3.utils.fromWei(balance,"ether")
-                token1PriceInformation.needed = (this.state.payment/token1PriceInformation.fiatPrice).toFixed(8)
-                return Token2.deployed()
+                
+                token2 = await Token2.deployed()
+                //token1PriceInformation.needed = (this.state.payment/token1PriceInformation.fiatPrice).toFixed(8)
+                let path = []
+                console.log(`token1 address is ${token1.address}`)
+                path.push(token1.address);
+                path.push(token2.address);
+
+                token1PriceInformation.needed = web3.utils.fromWei(await paymentContract._requiredTokenAmount(web3.utils.toWei(token1PriceInformation.usdAmount.toString(), "ether"), path),"ether")
+                console.log(`token1 needed: ${token1PriceInformation.needed}`)
+                return token2
             }).then(contract => {
-                token2 = contract
+                //token2 = contract
+                
                 return token2.name()
             }).then(name => {
+                console.log(`token2 name is: ${name}`)
                 token2PriceInformation.name = name
                 return token2.symbol()
             }).then(symbol => {
@@ -251,6 +265,7 @@ class PayWithCrypto extends React.Component {
                 token2PriceInformation.balance = web3.utils.fromWei(balance,"ether")
                 // alert(this.state.payment)
                 token2PriceInformation.needed = (this.state.payment/token2PriceInformation.fiatPrice).toFixed(8)
+                console.log(`token1PriceInformation object is ${Object.values(token2PriceInformation).join(', ')}`)
                 this.setState(state => ({
                     balances: [{...token1PriceInformation}, {...token2PriceInformation}],
                 }))
@@ -277,9 +292,9 @@ class PayWithCrypto extends React.Component {
 
     render() {
         return(
-            <div>
+            <div class="flex flex-col h-full">
                 <Header/>
-                <div class="h-screen bg-cover bg-top bg-payWithCryptoBg">
+                <div class="flex flex-col h-full bg-cover bg-top bg-payWithCryptoBkg">
                     <h1 class="pt-8 pb-6 text-4xl font-bold text-center text-white">Pay with Crypto</h1>
 
                     <div class="m-6 px-6 py-8 rounded-xl bg-white bg-opacity-75 shadow-md">

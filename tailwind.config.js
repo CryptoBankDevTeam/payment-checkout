@@ -5,9 +5,7 @@ module.exports = {
     
     extend: {
       textColor: {
-
         'primary': '#0056ab',
- 
       },
       backgroundColor: theme => ({
 
@@ -18,7 +16,8 @@ module.exports = {
         // 'danger': '#e3342f',
       }),
       backgroundImage: {
-        'payWithCryptoBg': "url('/src/images/payWithCryptoBg.png')",
+        'payWithCryptoBkg': "url('/src/images/payWithCryptoBkg.png')",
+        'paymentStatusBkg': "url('/src/images/paymentStatusBkg.png')",
       }
     },
   },
