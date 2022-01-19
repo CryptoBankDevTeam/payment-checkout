@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from "react-router-dom";
 import {  useLocation } from "react-router-dom";
 import {Token1, Token2, PaymentContract} from '../contracts/artifacts';
 
@@ -87,7 +88,7 @@ class PaymentStatus extends React.Component {
             Token1.setProvider(web3Provider)
             Token2.setProvider(web3Provider)
             PaymentContract.setProvider(web3Provider)
-            
+                
             let token1
             let token2
             let paymentContract = await PaymentContract.deployed()
@@ -156,6 +157,11 @@ class PaymentStatus extends React.Component {
             status = <div class="flex flex-col items-center justify-between">                        
                         <StatusBox title={'Payment Complete'}/>
                         <CompleteProgress/>
+                        
+                        <Link to="/">
+                            <p class="mt-4 p-4 bg-primary rounded-md text-white">Back to check out</p>
+                        </Link>
+
                     </div>
         }
 

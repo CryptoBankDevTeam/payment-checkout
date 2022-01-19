@@ -4,4 +4,4 @@ let Token1 = TruffleContract(require ("../../../../../shared-contracts/cryptoban
 let Token2 = TruffleContract(require ("../../../../../shared-contracts/cryptobank/Token2.json"))
 let PaymentContract = TruffleContract(require ("../../../../../shared-contracts/cryptobank/PaymentContract.json"))
 
-export { Token1, Token2, PaymentContract }
+export  { Token1, Token2, PaymentContract }

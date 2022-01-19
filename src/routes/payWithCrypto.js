@@ -7,7 +7,9 @@ import axios from 'axios'
 import { Link } from "react-router-dom";
 
 import { setupWeb3, web3, web3Provider } from '../web3/config'
-import {Token1, Token2, PaymentContract} from '../contracts/artifacts';
+import { Token1, Token2, PaymentContract } from '../contracts/artifacts';
+
+import { priceDataFeed, blockChainAccessor, casePayWithCrypto } from '../service/usecases'
 
 // let chainLinkNgnUsdAddress = '0x1FF2B48ed0A1669d6CcC83f4B3c84FDdF13Ea594'
 
@@ -22,10 +24,7 @@ function BalanceContent(props) {
     );
 }
 
-
 function Balance(props) {
-
-
     return(
         <div class="mb-4">
             <Link to={`/paymentStatus?tokenSymbol=${props.tokenSymbol}&tokenQty=${props.needed}&fiatSymbol=${props.fiatSymbol}&usdAmount=${props.usdAmount}&fiatAmount=${props.fiatAmount}`}>
@@ -60,8 +59,9 @@ class WalletBalances extends React.Component {
             <div>
                 <h1 class="text-md text-gray-500 mb-4">Wallet Balances</h1>
                 <div class="space-y-4"> 
-                    {this.props.balances.map(bal => {
+                    {this.props.balances.map((bal, index) => {
                         return <Balance 
+                                    key={index}
                                     tokenSymbol={bal.symbol} 
                                     available={bal.balance} 
                                     needed={bal.needed}
@@ -75,8 +75,6 @@ class WalletBalances extends React.Component {
         );
     }
 }
-
-
 
 class PayWithCrypto extends React.Component {
 
@@ -93,6 +91,12 @@ class PayWithCrypto extends React.Component {
         this.getPrice = this.getPrice.bind(this)
         this.generateRandomPayment = this.generateRandomPayment.bind(this)
         this.startPayment = this.startPayment.bind(this)
+        this.handleGetPriceBtcNgn = this.handleGetPriceBtcNgn.bind(this)
+        this.handleGetPriceBusdBtc = this.handleGetPriceBusdBtc.bind(this)
+        this.handleGetPriceBusdNgn = this.handleGetPriceBusdNgn.bind(this)
+        this.handleGetUsdAmount = this.handleGetUsdAmount.bind(this)
+
+        this.handleChangePayment = this.handleChangePayment.bind(this)
     }
 
     componentDidMount() {
@@ -126,7 +130,7 @@ class PayWithCrypto extends React.Component {
         //     payment: this.generateRandomPayment()
         // })
 
-        setupWeb3()
+        // setupWeb3()
     }
 
 
@@ -137,15 +141,14 @@ class PayWithCrypto extends React.Component {
 
 
     async getPrice(pair) {
-
-        try {
-            let { data, status, config } = await axios.get('/api/v3/ticker/price?symbol='+pair)
-            //alert(`status is ${status} ${Object.keys(config)}`)
-            return data.price  
-        } catch (e) {
-            alert(e)
-        }     
-        
+        return await priceDataFeed.getPrice(pair)
+        // try {
+        //     let { data, status, config } = await axios.get('/api/v3/ticker/price?symbol='+pair)
+        //     //alert(`status is ${status} ${Object.keys(config)}`)
+        //     return data.price  
+        // } catch (e) {
+        //     alert(e)
+        // }     
     }
 
     async getUsdAmount(fiatTokenPrice, tokenUsdPair) {
@@ -154,137 +157,63 @@ class PayWithCrypto extends React.Component {
         return this.state.payment/exRate
     }
 
-    async handleLoadWalletBalances() {
-        // alert('In handleLoadWalletBalances')
-        // Connect to web3 wallet
-        // load balances
-        let account
-        
-        let token1
-        let token2
-
-        PaymentContract.setProvider(web3Provider)
-        let paymentContract = await PaymentContract.deployed()
-
-        let token1PriceInformation = {
-            tokenQty: 0,
-            symbol: '',
-            name: '',
-            balance: '',
-            needed: '',
-            usdPrice: 0,
-            usdAmount: 0,
-            fiatPrice: 0
-        }
-
-        let token2PriceInformation = {
-            tokenQty: 0,
-            symbol: '',
-            name: '',
-            balance: '',
-            needed: '',
-            usdPrice: 0,
-            usdAmount: 0,
-            fiatPrice: 0
-        }
-
-        let bals = []
-
-        web3.eth.getAccounts()
-        .then(res => {
-            console.log(`chainId is: ${web3.givenProvider.chainId}`)
-            account = res[0]
-            return web3.eth.getBalance(account)
-        })
-        .then(res => {
-            //alert(`Account balance is ${res}`) 
-
-            // let Token1 = TruffleContract(require ("../../../../../shared-contracts/cryptobank/Token1.json"))
-            // let Token2 = TruffleContract(require ("../../../../../shared-contracts/cryptobank/Token2.json"))
-
-            //alert(Object.keys(web3Provider).join(","))
-            //alert(`chainId: ${web3Provider.chainId} \nis Metamask: ${web3Provider.isMetaMask}`)
-
-            Token1.setProvider(web3Provider)
-            Token2.setProvider(web3Provider)
-
-            Token1.deployed()
-            .then(contract => {
-                token1 = contract
-                return token1.name()
-            }).then(name => {                
-                token1PriceInformation.name = name
-                //alert(`name is ${token1Balance.name}`)
-                return token1.symbol()
-            }).then(symbol => {
-                token1PriceInformation.symbol = symbol
-                return this.getPrice('BTCNGN')
-            }).then(async fiatTokenPrice =>{
-                //alert(`symbol is ${token1Balance.symbol}`)
-                // token1PriceByFiatPrice = fiatTokenPrice
-                // token1PriceByUsdPrice = await this.getPrice('BTCUSD')
-                // let exRate = token1PriceByFiatPrice / token1PriceByUsdPrice
-                token1PriceInformation.fiatPrice = fiatTokenPrice
-                token1PriceInformation.usdAmount = await this.getUsdAmount(fiatTokenPrice, 'BTCBUSD')
-                console.log(`token1 USD amount is ${token1PriceInformation.usdAmount}`)
-                return token1.balanceOf(account)
-            }).then(async balance => {
-                //alert(`balance is ${balance}`)
-                token1PriceInformation.balance = web3.utils.fromWei(balance,"ether")
-                
-                token2 = await Token2.deployed()
-                //token1PriceInformation.needed = (this.state.payment/token1PriceInformation.fiatPrice).toFixed(8)
-                let path = []
-                console.log(`token1 address is ${token1.address}`)
-                path.push(token1.address);
-                path.push(token2.address);
-
-                token1PriceInformation.needed = web3.utils.fromWei(await paymentContract._requiredTokenAmount(web3.utils.toWei(token1PriceInformation.usdAmount.toString(), "ether"), path),"ether")
-                console.log(`token1 needed: ${token1PriceInformation.needed}`)
-                return token2
-            }).then(contract => {
-                //token2 = contract
-                
-                return token2.name()
-            }).then(name => {
-                console.log(`token2 name is: ${name}`)
-                token2PriceInformation.name = name
-                return token2.symbol()
-            }).then(symbol => {
-                token2PriceInformation.symbol = symbol
-                return this.getPrice('ETHNGN')
-            }).then(async fiatTokenPrice => {
-                //token2Price = price
-                token2PriceInformation.fiatPrice = fiatTokenPrice
-                token2PriceInformation.usdAmount = await this.getUsdAmount(fiatTokenPrice, 'ETHBUSD')
-                return token2.balanceOf(account)
-            }).then(balance => {
-                token2PriceInformation.balance = web3.utils.fromWei(balance,"ether")
-                // alert(this.state.payment)
-                token2PriceInformation.needed = (this.state.payment/token2PriceInformation.fiatPrice).toFixed(8)
-                console.log(`token1PriceInformation object is ${Object.values(token2PriceInformation).join(', ')}`)
-                this.setState(state => ({
-                    balances: [{...token1PriceInformation}, {...token2PriceInformation}],
-                }))
-                
-                //return this.getPrice()
-                //alert(`and ${this.state.balances.length}`)
-                // alert(this.state.balances[0].symbol)
-            })
-            .catch(err => {
-                alert(err)
-            })
-            
-        })
-
-        
-        
-        // let tkn = Token1.deployed()
-        // alert(tkn.address)
+    async handleGetPriceBtcNgn(){
+        let price = await this.getPrice('BTCNGN')
+        console.log(`BTCNGN price is ${price}`)
     }
 
+    async handleGetPriceBusdBtc(){
+        let price = await this.getPrice('BTCBUSD')
+        console.log(`BTCBUSD price is ${price}`)
+    }
+
+    async handleGetPriceBusdNgn(){
+        let price = await this.getPrice('BUSDNGN')
+        console.log(`BUSDNGN price is ${price}`)
+    }
+
+    async handleGetUsdAmount() {
+
+        let stableCoinSymbol = 'TK2'
+
+        let amt = await priceDataFeed.getStableCoinAmount({
+            fiatSymbol: 'NGN',
+            fiatAmount: this.state.payment,
+            tokenSymbol: '',
+            stableCoinSymbol
+        })
+
+        console.log(`Stable coin amount is ${amt.toLocaleString()} ${stableCoinSymbol}`)
+    }
+
+    async handleLoadWalletBalances() {
+        let stableCoinSymbol = 'TK2'
+
+        let bals = await casePayWithCrypto.loadBalances({
+            fiatSymbol: 'NGN',
+            fiatAmount: this.state.payment,
+            tokenSymbol: 'TK1',
+            stableCoinSymbol: 'TK2'
+        })
+
+        console.log(`Balance received`)
+        console.log(`needed is ${bals[0].usdAmount}`)
+
+        this.setState({
+            balances: bals
+        })
+    }
+    
     startPayment() {
 
+    }
+
+    handleSetPayment(event) {
+
+    }
+
+    handleChangePayment(event){
+        this.setState({payment: event.target.value})
     }
 
     render() {
@@ -296,9 +225,16 @@ class PayWithCrypto extends React.Component {
 
                     <div class="m-6 px-6 py-8 rounded-xl bg-white bg-opacity-75 shadow-md">
                         <p class="text-left text-gray-500">Total Payment</p>
-                        <div class="flex flex-row">
+                        <div class="flex flex-col gap-4">
                             <p class="text-left text-4xl text-red-600">{new Intl.NumberFormat('en-NG', {style: 'currency', currency: 'NGN'   }).format(this.state.payment)}</p>
                             {/* <p class="text-left text-sm text-red-600">NGN</p> */}
+                            
+                            <input class="w-max p-2 border-2 rounded" 
+                                type="number"
+                                value={this.state.payment}
+                                onChange={this.handleChangePayment}
+                            />
+                            
                         </div>
                         
                     </div>
@@ -309,6 +245,26 @@ class PayWithCrypto extends React.Component {
                                 Load Balances
                             </p>
                         </button>
+                        {/* <button class="mx-6 mt-2 my-0 p-2 bg-primary rounded-lg shadow" onClick={this.handleGetPriceBtcNgn}>
+                            <p class="text-white text-lg">
+                                BTC/NGN price
+                            </p>
+                        </button>
+                        <button class="mx-6 mt-2 my-0 p-2 bg-primary rounded-lg shadow" onClick={this.handleGetPriceBusdBtc}>
+                            <p class="text-white text-lg">
+                                BTC/BUSD price
+                            </p>
+                        </button>
+                        <button class="mx-6 mt-2 my-0 p-2 bg-primary rounded-lg shadow" onClick={this.handleGetPriceBusdNgn}>
+                            <p class="text-white text-lg">
+                                BUSD/NGN price
+                            </p>
+                        </button>
+                        <button class="mx-6 mt-2 my-0 p-2 bg-primary rounded-lg shadow" onClick={this.handleGetUsdAmount}>
+                            <p class="text-white text-lg">
+                                Get USD Amount
+                            </p>
+                        </button> */}
                     </div>
 
                     <div class="m-6">
