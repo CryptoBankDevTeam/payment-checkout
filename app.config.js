@@ -6,22 +6,23 @@ module.exports = {
                 address: ''
             },
             tokens: {
-                'token1':{
+                token1: {
                     address: '',
                     abi: '',
-                    token:
+                    token: '',
                 },
-                'token2':{
+                token2: {
                     address: '',
                     abi: ''
                 },
             }
         },
-        'parastate': { 
+        parastate: { 
             url: 'https://rpc.parastate.io:8545',
         },
-        'bsc-testnet': { 
+        bscTestnet: { 
             url: 'https://data-seed-prebsc-1-s1.binance.org:8545/'
         },
-    }
+    },
+    currentBlockChain: this.networks.bscTestnet
 }

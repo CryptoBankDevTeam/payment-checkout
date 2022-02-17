@@ -10,7 +10,7 @@ import pendingImg from '../images/pending-img.png'
 
 import UUID from "uuidjs";
 
-let vendorId = "0xaretyrir1A"
+let vendorId = "7ced88de-debc-4b37-b18a-1ab2f507352d"
 
 function ApprovalProgress(props) {
     return(

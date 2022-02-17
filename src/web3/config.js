@@ -1,4 +1,5 @@
 import Web3 from "web3";
+import { currentBlockChain, networks } from '../../app.config'
 
 let web3Provider
 let web3
@@ -22,7 +23,7 @@ else if (window.web3) {
 }
 // If no injected web3 instance is detected, fall back to Ganache
 else {
-    web3Provider = new Web3.providers.HttpProvider('http://localhost:8545') //"https://rpc.parastate.io:8545"); //'http://localhost:8545');
+    web3Provider = new Web3.providers.HttpProvider(currentBlockChain) //"https://rpc.parastate.io:8545"); //'http://localhost:8545');
 }
 
 web3 = new Web3(web3Provider)   
