@@ -1,19 +1,23 @@
 import React from 'react'
 import { Link } from "react-router-dom";
-import {  useLocation } from "react-router-dom";
-import {Token1, Token2, PaymentContract} from '../contracts/artifacts';
+import { useLocation } from "react-router-dom";
 
-import { web3, web3Provider, accounts } from '../web3/config'
+import web3 from 'web3'
 import Header from "../components/header";
 import doneImg from '../images/done-img.png'
 import pendingImg from '../images/pending-img.png'
 
 import UUID from "uuidjs";
 
-let vendorId = "7ced88de-debc-4b37-b18a-1ab2f507352d"
+import { withLocation } from '../components/hocs'
+import { withMetaMask } from '../components/hocWithMetamask'
+
+import { casePayWithCrypto } from '../service/usecases';
+
+// let vendorId = "7ced88de-debc-4b37-b18a-1ab2f507352d"
 
 function ApprovalProgress(props) {
-    return(
+    return (
         <div class="flex flex-row items-center">
             <img src={doneImg}></img>
             <img src={pendingImg}></img>
@@ -23,7 +27,7 @@ function ApprovalProgress(props) {
 }
 
 function WithdrawalProgress(props) {
-    return(
+    return (
         <div class="flex flex-row items-center">
             <img src={doneImg}></img>
             <img src={doneImg}></img>
@@ -33,7 +37,7 @@ function WithdrawalProgress(props) {
 }
 
 function CompleteProgress(props) {
-    return(
+    return (
         <div class="flex flex-row items-center">
             <img src={doneImg}></img>
             <img src={doneImg}></img>
@@ -59,120 +63,110 @@ class PaymentStatus extends React.Component {
             fiatSymbol: '',
             fiatAmount: 0,
             paymentStatuses: ['approval', 'withdrawal'],
-            paymentStatus: 'approval'
+            paymentStatus: 'approval',
+            paymentId: ''
         }
+
+        this.handleBackToVendorSite = this.handleBackToVendorSite.bind(this)
     }
 
     componentDidMount() {
         // alert(Object.keys(this.props.location))
         // alert(this.props.location.search)
-        let query = new URLSearchParams(this.props.location.search);
+        // let query = new URLSearchParams(this.props.location.search);
         // alert(query.get("fiatSymbol"))
-        
+
+        let location = this.props.location
+
+        console.log('location is')
+        console.log(location.state)
+
         this.setState({
-            tokenSymbol: query.get("tokenSymbol"),
-            tokenQty: query.get("tokenQty"),
-            usdAmount: query.get("usdAmount"),
-            fiatSymbol: query.get("fiatSymbol"),
-            fiatAmount: query.get("fiatAmount")
-        },async ()=> {
-            console.log(`token symbol is ${this.state.tokenSymbol}`)
-            console.log(`token quantity is ${this.state.tokenQty}`)
-            console.log(`USD amount is ${this.state.usdAmount}`)
-            console.log(`fiat symbol is ${this.state.fiatSymbol}`)
-            console.log(`fiat amount is ${this.state.fiatAmount}`)
-            // alert(this.state.tokenQty)
-            // alert(this.state.fiatSymbol)
-            let accts = await web3.eth.getAccounts()
-            // Call contract
-            Token1.setProvider(web3Provider)
-            Token2.setProvider(web3Provider)
-            PaymentContract.setProvider(web3Provider)
-                
-            let token1
-            let token2
-            let paymentContract = await PaymentContract.deployed()
-            
-            Token1.deployed()
-            .then(token => {
-
-                token1 = token
-                // return token1.name()
-
-                // get approval
-
-                return token1.approve(paymentContract.address, web3.utils.toWei((this.state.tokenQty * 1.2).toString(), "ether"), {from: accts[0]})
-            })
-            .then(res => {
-                // return paymentContract.vendorBalance(vendorId, {from: accounts[0]})
-                console.log(`approved ${res.tx}`)
+            ...location.state
+        }, async () => {
+            console.log({ tokenSymbol: this.state.tokenSymbol, tokenQty: this.state.needed })
+            let { success, approved } = await casePayWithCrypto.approveTokenTransfer({ tokenSymbol: this.state.tokenSymbol, tokenQty: this.state.needed })
+            console.log(success)
+            if (success) {
                 this.setState({
                     paymentStatus: 'withdrawal'
                 })
-            })
-            .then(res => {
-                // console.log(`payment contract token2 initial balance: ${res}`)
-                // alert(token1.address)
-                let usdAmt = Number(this.state.usdAmount).toFixed(2)
-                console.log(`usdAmount is ${usdAmt}`)
-                let usdAmountInBn = web3.utils.toWei(usdAmt.toString(), "ether")  
-                console.log(`usdAmount in BN is ${usdAmountInBn}`)
-                let paymentId = UUID.genV1().toString();
-                return paymentContract.makePayment(vendorId, token1.address, usdAmountInBn, this.state.fiatSymbol, this.state.fiatAmount, this.state.tokenSymbol, paymentId, {from: accts[0]})
-            })
-            .then(res => {
-                console.log(res.logs) 
+
+                console.log(`approval done`)
+                console.log(approved)
+                console.log({ vendorId: this.state.vendorId, fiatSymbol: this.state.fiatSymbol, fiatAmount: this.state.fiatAmount, tokenSymbol: this.state.tokenSymbol })
+
+                let res = await casePayWithCrypto.makePayment({ vendorId: this.state.vendorId, fiatSymbol: this.state.fiatSymbol, fiatAmount: this.state.fiatAmount, tokenSymbol: this.state.tokenSymbol })
+
+                console.log(res)
+                console.log(res.logs)
                 console.log(`payment transaction id: ${res.logs[1].args._transactionId}
                 token amount: ${web3.utils.fromWei(res.logs[0].args._tokenAmount, "ether")}
                 amount in USD: ${web3.utils.fromWei(res.logs[1].args._amountInUSD, "ether")}
                 swapped amount: ${res.logs[0].args.amountOut}
                 vendorId: ${res.logs[1].args._vendorId}`)
                 this.setState({
-                    paymentStatus: 'complete'
+                    paymentStatus: 'complete',
+                    paymentId: res.logs[1].args._transactionId
                 })
-                //return paymentContract.vendorBalance(vendorId, {from: accts[0]})
-            })
-            .catch(err => {
-                console.log(err)
-            })
-	        //let token2 = await Token2.deployed()
+            }
+
+            //let token2 = await Token2.deployed()
 
         })
     }
 
-    render () {
+    handleBackToVendorSite() {
+        window.top.postMessage({
+            success: true,
+            msg: 'payment-complete',
+            tokenQty: this.state.tokenQty,
+            tokenSymbol: this.state.tokenSymbol,
+            usdAmount: this.state.usdAmount,
+            fiatSymbol: this.state.fiatSymbol,
+            fiatAmount: this.state.fiatAmount,
+            paymentId: this.state.paymentId
+        }, "*")
+    }
+
+    render() {
 
         let status
-        if(this.state.paymentStatus === 'approval') {
-            status = <div class="flex flex-col items-center justify-between">                        
-                        <StatusBox title={'Approval Pending'}/>
-                        <ApprovalProgress/>
-                    </div>
-        } else if(this.state.paymentStatus === 'withdrawal') {
-            status = <div class="flex flex-col items-center justify-between">                        
-                        <StatusBox title={'Withdrawal Pending'}/>
-                        <WithdrawalProgress/>
-                    </div>
-        } else if(this.state.paymentStatus === 'complete') {
-            status = <div class="flex flex-col items-center justify-between">                        
-                        <StatusBox title={'Payment Complete'}/>
-                        <CompleteProgress/>
-                        
-                        <Link to="/">
-                            <p class="mt-4 p-4 bg-primary rounded-md text-white">Back to check out</p>
-                        </Link>
+        if (this.state.paymentStatus === 'approval') {
+            status = <div class="flex flex-col items-center justify-between">
+                <StatusBox title={'Approval Pending'} />
+                <ApprovalProgress />
+            </div>
+        } else if (this.state.paymentStatus === 'withdrawal') {
+            status = <div class="flex flex-col items-center justify-between">
+                <StatusBox title={'Withdrawal Pending'} />
+                <WithdrawalProgress />
+            </div>
+        } else if (this.state.paymentStatus === 'complete') {
+            status = <div class="flex flex-col items-center justify-between">
+                <StatusBox title={'Payment Complete'} />
+                <CompleteProgress />
 
-                    </div>
+
+                <button
+                    class="mt-4 p-4 bg-primary rounded-md text-white"
+                    onClick={this.handleBackToVendorSite}
+                >Back to vendor site
+                </button>
+
+
+            </div>
         }
 
-        return(
+        return (
             <div class="flex flex-col h-full">
-                <Header/>
+                <Header />
+
                 <div class="flex flex-col h-full bg-cover bg-top bg-paymentStatusBkg">
                     <h1 class="pt-8 pb-6 text-4xl font-bold text-center text-white">Payment Status</h1>
 
                     {status}
-                    
+
                     {/* <h1>Payment Status</h1> */}
                     {/* <p>{this.state.tokenSymbol}</p>
                     <p>{this.state.tokenQty}</p>
@@ -184,4 +178,6 @@ class PaymentStatus extends React.Component {
     }
 }
 
-export default PaymentStatus
+let PaymentStatusWithLocation = withMetaMask(withLocation(PaymentStatus))
+
+export { PaymentStatusWithLocation as PaymentStatus }

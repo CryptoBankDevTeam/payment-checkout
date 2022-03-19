@@ -1,202 +1,5 @@
-
-import axios from 'axios'
-axios.defaults.baseURL = 'https://api.binance.com';
-
-
-class BlockChainAccessor {
-
-    constructor({ web3, web3Provider, chainName, Token1, Token2, PaymentContract }) {
-        this.web3 = web3
-        // alert(this.web3)
-        this.web3Provider = web3Provider
-        this.chainName = chainName
-        this.Token1 = Token1
-        this.Token2 = Token2
-        this.PaymentContract = PaymentContract
-    }
-
-    async loadBalances(paymentInFiat, paymentInStableCoin) {
-
-        console.log(`in loadBalances`)
-
-        let token1
-        let token2
-
-        let token1PriceInformation = {
-            tokenQty: 0,
-            symbol: '',
-            name: '',
-            balance: '',
-            needed: '',
-            usdPrice: 0,
-            usdAmount: 0,
-            fiatPrice: 0
-        }
-
-        this.Token1.setProvider(this.web3Provider)
-        this.Token2.setProvider(this.web3Provider)
-
-        let account = await this.web3.eth.getAccounts()
-        .then(accounts => {
-            console.log(`chainId is: ${this.web3.givenProvider.chainId}`)
-            return accounts[0]
-        })
-
-        console.log(`account is ${account}`)
-
-        return this.Token1.deployed()
-        .then(contract => {
-            token1 = contract
-            return token1
-        })
-        .then(async tk => {
-            token1PriceInformation.name = await tk.name()
-            token1PriceInformation.symbol = await tk.symbol()
-            token1PriceInformation.balance = this.web3.utils.fromWei(await tk.balanceOf(account),"ether")
-            console.log(`${Object.keys(tk)}`)
-            console.log(`${await tk.symbol()}`)
-            console.log(`${await tk.name()}`)
-
-            // Object.keys(token1PriceInformation).forEach(tk => {
-            //     console.log(`${tk}: ${token1PriceInformation[tk]}`)
-            // })
-
-            // console.log(`${Object.keys(token1PriceInformation)}`)
-            
-            return [token1PriceInformation]
-        })        
-    }
-
-    async loadWalletBalances(payment, usdAmount) {
-
-        let account
-        
-        let token1
-        let token2
-
-        this.PaymentContract.setProvider(this.web3Provider)
-        let paymentContract = await this.PaymentContract.deployed()
-
-        let token1PriceInformation = {
-            tokenQty: 0,
-            symbol: '',
-            name: '',
-            balance: '',
-            needed: '',
-            usdPrice: 0,
-            usdAmount: 0,
-            fiatPrice: 0
-        }
-
-        let token2PriceInformation = {
-            tokenQty: 0,
-            symbol: '',
-            name: '',
-            balance: '',
-            needed: '',
-            usdPrice: 0,
-            usdAmount: 0,
-            fiatPrice: 0
-        }
-
-        return this.web3.eth.getAccounts()
-        .then(res => {
-            console.log(`chainId is: ${this.web3.givenProvider.chainId}`)
-            account = res[0]
-            return this.web3.eth.getBalance(account)
-        })
-        .then(res => {
-
-            this.Token1.setProvider(this.web3Provider)
-            this.Token2.setProvider(this.web3Provider)
-
-            this.Token1.deployed()
-            .then(contract => {
-                token1 = contract
-                return token1.name()
-            }).then(name => {
-                token1PriceInformation.name = name
-                //alert(`name is ${token1Balance.name}`)
-                return token1.symbol()
-            }).then(symbol => {
-                token1PriceInformation.symbol = symbol
-                return //this.getPrice('BTCNGN')
-            }).then(async fiatTokenPrice =>{
-                token1PriceInformation.fiatPrice = fiatTokenPrice
-                token1PriceInformation.usdAmount = await this.getUsdAmount(fiatTokenPrice, 'BTCBUSD')
-                console.log(`token1 USD amount is ${token1PriceInformation.usdAmount}`)
-                return token1.balanceOf(account)
-            }).then(async balance => {
-                token1PriceInformation.balance = this.web3.utils.fromWei(balance,"ether")
-                
-                token2 = await this.Token2.deployed()
-                //token1PriceInformation.needed = (this.state.payment/token1PriceInformation.fiatPrice).toFixed(8)
-                let path = []
-                console.log(`token1 address is ${token1.address}`)
-                path.push(token1.address);
-                path.push(token2.address);
-
-                token1PriceInformation.needed = this.web3.utils.fromWei(await paymentContract._requiredTokenAmount(this.web3.utils.toWei(token1PriceInformation.usdAmount.toString(), "ether"), path),"ether")
-                console.log(`token1 needed: ${token1PriceInformation.needed}`)
-                return token2
-            }).then(contract => {
-                //token2 = contract                
-                return token2.name()
-            }).then(name => {
-                console.log(`token2 name is: ${name}`)
-                token2PriceInformation.name = name
-                return token2.symbol()
-            }).then(symbol => {
-                token2PriceInformation.symbol = symbol
-                return this.getPrice('ETHNGN')
-            }).then(async fiatTokenPrice => {
-                //token2Price = price
-                token2PriceInformation.fiatPrice = fiatTokenPrice
-                token2PriceInformation.usdAmount = await this.getUsdAmount(fiatTokenPrice, 'ETHBUSD')
-                return token2.balanceOf(account)
-            }).then(balance => {
-                token2PriceInformation.balance = this.web3.utils.fromWei(balance,"ether")
-                // alert(this.state.payment)
-                token2PriceInformation.needed = (payment/token2PriceInformation.fiatPrice).toFixed(8)
-                console.log(`token1PriceInformation object is ${Object.values(token2PriceInformation).join(', ')}`)
-
-                return [{...token1PriceInformation}, {...token2PriceInformation}]
-
-                // setBalances([{...token1PriceInformation}, {...token2PriceInformation}])
-                
-                // this.setState(state => ({
-                //     balances: [{...token1PriceInformation}, {...token2PriceInformation}],
-                // }))
-            })
-            .catch(err => {
-                console.log(err)
-            })
-        })
-    }
-
-}
-
-class PriceDataFeed {
-    async getPrice(pair) {
-        try {
-            let { data, status, config } = await axios.get('/api/v3/ticker/price?symbol='+pair)
-            //alert(`status is ${status} ${Object.keys(config)}`)
-            return data.price  
-        } catch (e) {
-            console.error(e)
-        }     
-    }
-
-    async getStableCoinAmount({ fiatSymbol, fiatAmount, tokenSymbol, stableCoinSymbol }) {
-        try {
-            let stableCoinFiatPairPrice = await this.getPrice(`${stableCoinSymbol}${fiatSymbol}`)
-            let amt = fiatAmount / stableCoinFiatPairPrice
-        return amt
-        } catch (e) {
-            console.error(e)
-        }
-    }
-}
+import { BlockChainAccessor } from '../dataaccessors/blockChainAccessor';
+import { PriceDataFeed } from '../dataaccessors/priceDataFeed';
 
 class LocalPriceDataFeed extends PriceDataFeed {
     async getPrice(pair) {
@@ -213,6 +16,34 @@ class LocalPriceDataFeed extends PriceDataFeed {
                 return 100/50
             } else if(pair === "TK2TK1") {
                 return 50/100
+            } else if(pair === "TST1NGN") {
+                return 1/1e-15
+            } else if(pair === "NGNTST1") {
+                return 1e-15
+            } else if(pair === "TST2NGN") {
+                return 1/1e-15
+            } else if(pair === "TST3NGN") {
+                return 4/1
+            } else if(pair === "TST1STB") {
+                return 1/1
+            } else if(pair === "STBTST1") {
+                return 1/1
+            } else if(pair === "STBNGN") {
+                return 1/1e-15
+            } else if(pair === "NGNSTB") {
+                return 1e-15
+            } else if(pair === "USDTNGN") {
+                return 580
+            } else if(pair === "NGNUSDT") {
+                return 1/580
+            } else if(pair === "BTCNGN") {
+                return 26000000
+            } else if(pair === "NGNBTC") {
+                return 1/26000000
+            } else if(pair === "BTCUSDT") {
+                return 45000
+            } else if(pair === "NGNBTC") {
+                return 1/45000
             }
         } catch (e) {
             console.error(e)
@@ -222,6 +53,9 @@ class LocalPriceDataFeed extends PriceDataFeed {
     async getStableCoinAmount({ fiatSymbol, fiatAmount, tokenSymbol, stableCoinSymbol }) {
         try {
             let stableCoinFiatPairPrice = await this.getPrice(`${stableCoinSymbol}${fiatSymbol}`)
+            console.log(`stableCoinFiatPair symbol is ${stableCoinSymbol}${fiatSymbol}`)
+            console.log(`stableCoinFiatPairPrice is ${stableCoinFiatPairPrice}`)
+            if(!stableCoinFiatPairPrice) throw 'stableCoinFiatPairPrice not available!'
             let amt = fiatAmount / stableCoinFiatPairPrice
         return amt
         } catch (e) {
@@ -252,7 +86,55 @@ class CasePayWithCrypto {
         return await this.priceDataFeed.getStableCoinAmount({ fiatSymbol, fiatAmount, tokenSymbol, stableCoinSymbol })       
     }
 
-    async setPriceInformationForTokensInWallet({fiatAmount, balances}) {
+    async setPriceInformationForTokensInWallet({fiatSymbol, fiatAmount, balances}) {
+        
+        console.log(`in set Price Information`)
+        console.log(balances)
+        console.log(`Number of items is ${balances.length}`)
+
+        let balancesWithPriceInfo = await balances.map(async balance => {
+
+            console.log(`in set Price Information, pair is ${balance.symbol}${fiatSymbol}`)
+            
+            let tokenFiatPrice = await this.getPrice(`${balance.symbol}${fiatSymbol}`)
+            console.log(`token-fiat price is ${tokenFiatPrice}`)
+
+            // let stableCoinAmt = await this.getStableCoinAmount({ 
+            //     fiatSymbol,
+            //     fiatAmount, 
+            //     tokenSymbol: balance.symbol,
+            //     stableCoinSymbol: 'TK2',
+            // })
+
+            let neededToken = fiatAmount / tokenFiatPrice 
+        
+            let newBalanceInfo = {
+                tokenQty: neededToken,
+                symbol: balance.symbol,
+                name: balance.name,
+                balance: balance.balance,
+                needed: neededToken,
+                // usdPrice: await this.getPrice(`TK2${balance.symbol}`),
+                // usdAmount: stableCoinAmt,
+                fiatPrice: 0,
+                fiatAmount
+            }
+            // balancesWithPriceInfo.push(balance)
+
+            return newBalanceInfo
+        })        
+
+        return Promise.all(balancesWithPriceInfo).then((values) => {
+            console.log(values);
+            console.log(`number of tokens is ${values.length}`)
+            console.log(values)
+
+            return values
+        });
+
+    }
+
+    async setPriceInformationForTokensInWalletOld({fiatSymbol, fiatAmount, balances}) {
         
         console.log(`in set Price Information`)
         console.log(balances)
@@ -261,13 +143,14 @@ class CasePayWithCrypto {
 
         balancesWithPriceInfo = await balances.map(async balance => {
 
-            console.log(`in set Price Information, pair is ${balance.symbol}NGN`)
+            console.log(`in set Price Information, pair is ${balance.symbol}${fiatSymbol}`)
 
-            let tokenFiatPrice = await this.getPrice(`${balance.symbol}NGN`)
+            
+            let tokenFiatPrice = await this.getPrice(`${balance.symbol}${fiatSymbol}`)
             console.log(`token-fiat price is ${tokenFiatPrice}`)
 
             let stableCoinAmt = await this.getStableCoinAmount({ 
-                fiatSymbol: 'NGN', 
+                fiatSymbol,
                 fiatAmount, 
                 tokenSymbol: balance.symbol,
                 stableCoinSymbol: 'TK2',
@@ -301,23 +184,28 @@ class CasePayWithCrypto {
 
     }
 
-    async loadBalances({fiatSymbol, fiatAmount, tokenSymbol, stableCoinSymbol}) {
-        console.log(`in load balances, fiatSymbol is ${fiatSymbol}, fiatAmount ${fiatAmount}, tokenSymbol is ${tokenSymbol}, stableCoinSymbol is ${stableCoinSymbol}`)
-        
-        let stableCoinAmount = await this.priceDataFeed.getStableCoinAmount({
-            fiatSymbol, 
-            fiatAmount, 
-            tokenSymbol, 
-            stableCoinSymbol
-        })
-        
-        console.log(`stable coin is ${stableCoinAmount}`)
+    getApprovedTokens() {
 
-        let balances = await this.blockChainAccessor.loadBalances(fiatAmount, stableCoinAmount)
+    }
 
+    async setupArtifacts(provider, account, web3) {
+        await this.blockChainAccessor.setupArtifacts(provider, account, web3)
+    }
+
+    async loadBalances({fiatAmount, fiatSymbol}) {
+        console.log(`in load Balances`)
+        // Get list of approved tokens for payment
+        let tokenList = await this.blockChainAccessor.tokensForPayment
+
+        console.log(tokenList)
+
+        // Get balances of tokens
+        let balances = await this.blockChainAccessor.loadTokenBalancesFromBuyerWallet({tokenList})   
+
+        console.log(`balances returned`)
         console.log(balances)
 
-        let balancesWithPriceInfo = await this.setPriceInformationForTokensInWallet({fiatAmount, balances})
+        let balancesWithPriceInfo = await this.setPriceInformationForTokensInWallet({fiatSymbol, fiatAmount, balances})
 
         // console.log(balances)
         console.log(balancesWithPriceInfo)
@@ -325,10 +213,37 @@ class CasePayWithCrypto {
         return balancesWithPriceInfo
     }
 
-    loadWalletBalances(data) {
-        this.blockChainAccessor.loadWalletBalances(data)        
+    async approveTokenTransfer({tokenSymbol, tokenQty }) {
+        console.log({tokenSymbol, tokenQty })
+        return await this.blockChainAccessor.approveTokenTransfer({tokenSymbol, tokenQty })
     }
 
+    async makePayment({vendorId,  fiatSymbol, fiatAmount , tokenSymbol, tokenQty}) {
+        console.log(`In makePayment of casePayWIthCrypto`)
+
+        let stableCoinSymbol = await (await this.blockChainAccessor.StableCoinForPayment).symbol()
+
+        console.log(stableCoinSymbol)
+
+        console.log({ 
+            fiatSymbol, 
+            fiatAmount, 
+            tokenSymbol,
+            stableCoinSymbol
+        })
+
+        let stableCoinAmt = await this.getStableCoinAmount({ 
+            fiatSymbol, 
+            fiatAmount, 
+            tokenSymbol,
+            stableCoinSymbol
+        })
+
+        // alert(`stableCoinAmount is ${stableCoinAmt}`)
+        console.log(stableCoinAmt)
+
+        return await this.blockChainAccessor.makePayment({vendorId,  fiatSymbol, fiatAmount , tokenSymbol, tokenQty, stableCoinAmt })
+    }
 }
 
 export { CasePayWithCrypto, PriceDataFeed, LocalPriceDataFeed, BlockChainAccessor }

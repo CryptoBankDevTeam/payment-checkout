@@ -1,19 +1,18 @@
 import './App.css';
 import * as React from "react";
-import { Switch, Route, Link } from "react-router-dom";
-import PayWithCrypto from './routes/payWithCrypto';
-import PaymentStatus from './routes/paymentStatus';
+import { Routes, Route, Link } from "react-router-dom";
+import {PayWithCrypto} from './routes/payWithCrypto';
+import {PaymentStatus} from './routes/paymentStatus';
+import {Metamask} from './routes/metamask';
 
 function App() {
   return (
-    <div class="flex flex-col h-screen">
-      <Switch>
-        <Route path="/paymentStatus" component={PaymentStatus}>
-        </Route>
-        <Route path="/">
-          <PayWithCrypto />
-        </Route>
-      </Switch>
+    <div class="lg:container mx-auto flex flex-col w-full lg:w-96 h-screen rounded-xl">
+      <Routes>
+        <Route path="/paymentStatus" element={<PaymentStatus/>}/>
+        <Route path="/" element={<PayWithCrypto/>}/>
+        <Route path="/metamask" element={<Metamask/>}/>
+      </Routes>
     </div>
   );
 }
