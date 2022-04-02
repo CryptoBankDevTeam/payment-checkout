@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@binance/connector": "^1.5.0",
     "@craco/craco": "^6.4.0",
     "@ethereumjs/tx": "^3.3.2",
     "@metamask/detect-provider": "^1.2.0",
