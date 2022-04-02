@@ -12,6 +12,43 @@ import {
 } from '../web3/config'
 import Web3 from 'web3';
 
+let basicDetector = async () => {
+    return  {
+        detect: async () => await detectEthereumProvider()
+    } 
+}
+
+let reliableDetector = async () => {
+    let detect = () => {
+        if (window.ethereum) {
+            handleEthereum();
+        } else {
+            window.addEventListener('ethereum#initialized', handleEthereum, {
+            once: true,
+        });
+        
+            // If the event is not dispatched by the end of the timeout,
+            // the user probably doesn't have MetaMask installed.
+            setTimeout(handleEthereum, 3000); // 3 seconds
+        }
+        
+        function handleEthereum() {
+            const { ethereum } = window;
+            if (ethereum && ethereum.isMetaMask) {
+                console.log('Ethereum successfully detected!!!');
+                return ethereum
+                // Access the decentralized web!
+            } else {
+                console.log('Please install MetaMask!');
+            }
+        }
+    }
+
+    return {
+        detect
+    }
+}
+
 export function withMetaMask(Component){
     return ((props) => {
         let [connected, setConnected] = useState(false) 
@@ -23,18 +60,25 @@ export function withMetaMask(Component){
         let [provider, setProvider] = useState(null) 
         
         let connectionStatus = connected ? <p>True</p> : <p>False</p>
-    
+        
         useEffect(() => {        
+            
             async function detectProvider() {
+
+                let detector = await reliableDetector()  // or basicDetector
+
+                console.log(detector)
+                detector.detect()
+            
                 let prov = await detectEthereumProvider()
                 setProvider(prov)
                 setWeb3(new Web3(prov))
-
+        
                 if (provider) {
                     console.log('Metamask detected')
                     // startApp(provider); // initialize your app
                     await window.ethereum.enable()
-
+        
                     handleSetupArtifacts()
                     
                     onConnect(provider, setConnected, setWeb3)
@@ -53,7 +97,7 @@ export function withMetaMask(Component){
             }
 
             detectProvider()
-    
+            
             return () => {
                 if(provider) {
                     // provider.removeListener('connect');
