@@ -27,7 +27,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco --max_old_space_size=4096 build",
+    "build": "CI='' craco --max_old_space_size=4096 build",
     "test": "craco test --env=./test/jest-environment-jsdom.js",
     "testmocha": "mocha -r jsdom-global/register",
     "eject": "react-scripts eject"
