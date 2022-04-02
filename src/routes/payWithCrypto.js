@@ -275,13 +275,7 @@ class PayWithCrypto extends React.Component {
 
     async getPrice(pair) {
         return await priceDataFeed.getPrice(pair)
-        // try {
-        //     let { data, status, config } = await axios.get('/api/v3/ticker/price?symbol='+pair)
-        //     //alert(`status is ${status} ${Object.keys(config)}`)
-        //     return data.price  
-        // } catch (e) {
-        //     alert(e)
-        // }     
+   
     }
 
     async getUsdAmount(fiatTokenPrice, tokenUsdPair) {
@@ -327,15 +321,6 @@ class PayWithCrypto extends React.Component {
 
     async handleLoadWalletBalances() {
         await this.handleSetupArtifacts()
-
-        // let stableCoinSymbol = 'TK2'
-
-        // let bals = await casePayWithCrypto.loadBalances({
-        //     fiatSymbol: 'NGN',
-        //     fiatAmount: this.state.payment,
-        //     tokenSymbol: 'TK1',
-        //     stableCoinSymbol: 'TK2'
-        // })
 
         let bals = await casePayWithCrypto.loadBalances({
             fiatSymbol: 'NGN',
@@ -441,7 +426,7 @@ function PayWithCryptoView2(props) {
     let itemLabelAndValue = (label, value) => <p className="flex flex-row justify-between items-center text-sm text-gray-600">{itemLabel(label)} {itemValue(value)}</p>
 
     return (
-        <div class="flex flex-col rounded-xl h-screen">
+        <div class="flex flex-col rounded-xl">
             {/* Header */}
             <div className="bg-blue-800 rounded-t-xl text-white text-center justify-center pt-4 pb-16">
                 <img className="h-10 mx-auto mb-2" src={cryptoBankLogo} />
@@ -493,8 +478,8 @@ function PayWithCryptoView2(props) {
                 <div className="bg-gray-100 rounded-b-md px-6 pt-12 pb-6">
                     <WalletBalances2
                         balances={props.viewData.balances}
-                        fiatAmount={props.viewData.payment}
                         fiatSymbol={props.viewData.fiatSymbol}
+                        fiatAmount={props.viewData.payment}
                         vendorId={props.viewData.vendorId}
                     />
                 </div>
