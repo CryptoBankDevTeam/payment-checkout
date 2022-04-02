@@ -1,10 +1,12 @@
 var TruffleContract = require('@truffle/contract')
 
-let Token1 = TruffleContract(require ("../../../shared-contracts/cryptobank/Token2.json"))
-let Token2 = TruffleContract(require ("../../../shared-contracts/cryptobank/Token2.json"))
-let ERC20 = TruffleContract(require ("../../../shared-contracts/cryptobank/ERC20.json"))
-let PaymentContract = TruffleContract(require ("../../../shared-contracts/cryptobank/PaymentContractTestNet.json"))
-let PancakeRouter  = TruffleContract(require ("../../../shared-contracts/cryptobank/PancakeRouter.json"))
+// let Token1 = TruffleContract(require ("../../../shared-contracts/cryptobank/Token2.json"))
+// let Token2 = TruffleContract(require ("../../../shared-contracts/cryptobank/Token2.json"))
+let Token1 = TruffleContract(require ("./src/contracts/Token2.json"))
+let Token2 = TruffleContract(require ("./src/contracts/Token2.json"))
+let ERC20 = TruffleContract(require ("./src/contracts/ERC20.json"))
+let PaymentContract = TruffleContract(require ("./src/contracts/PaymentContractTestNet.json"))
+let PancakeRouter  = TruffleContract(require ("./src/contracts/PancakeRouter.json"))
 
 module.exports = {
     networks: {
